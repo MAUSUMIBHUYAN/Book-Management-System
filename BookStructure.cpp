@@ -248,6 +248,7 @@ void searchbook(const string& filename) {
         default:
             cout << "Invalid choice!" << endl;
             return;
+            break;
     }
 
     cout << "\nSearch Results:" << endl;
@@ -318,11 +319,12 @@ void deletebook(const string& filename, const string& Booktitleinput) {
         return;
     }
 
-    vector<string> lines;
+    vector<string> lines;          
     string line;
     string normalizedinput = normalizestring(Booktitleinput);
-    string bestmatch;
-    float bestsimilarity = 0.0;
+    string lineToDelete;
+    string deleteID;
+    bool isDeleted = false;
 
     while (getline(file, line)) {
         stringstream ss(line);
@@ -333,56 +335,58 @@ void deletebook(const string& filename, const string& Booktitleinput) {
         getline(ss, category, ',');
         getline(ss, pricestr, ',');
         getline(ss, quantitystr);
+
         string normalizedtitle = normalizestring(title);
         float similarity = computesimilarity(normalizedinput, normalizedtitle);
-        if (similarity > bestsimilarity) {
-            bestsimilarity = similarity;
-            bestmatch = line;
-        } else {
-            lines.push_back(line);
+
+        
+        if (similarity >= 0.7) {
+            if (!isDeleted) {
+                cout << "\nMatching book found:\n";
+                cout << "Book ID   : " << id << "\n";
+                cout << "Title     : " << title << "\n";
+                cout << "Author    : " << author << "\n";
+                cout << "Category  : " << category << "\n";
+                cout << "Price     : " << pricestr << "\n";
+                cout << "Quantity  : " << quantitystr << "\n";
+                cout << "\nDo you want to delete this book? (Book ID: " << id << ") (y/n): ";
+                char confirm;
+                cin >> confirm;
+
+                if (tolower(confirm) == 'y') {
+                    lineToDelete = line;
+                    deleteID = id;
+                    isDeleted = true; 
+                    continue;         
+                }
+            }
         }
+        lines.push_back(line); 
     }
     file.close();
 
-    if (bestsimilarity >= 0.5) { 
-        cout << "\nClosest match found:\n";
-        stringstream ss(bestmatch);
-        string id, title, author, category, pricestr, quantitystr;
-        getline(ss, id, ',');
-        getline(ss, title, ',');
-        getline(ss, author, ',');
-        getline(ss, category, ',');
-        getline(ss, pricestr, ',');
-        getline(ss, quantitystr);
-        cout << "Book ID   : " << id << "\n";
-        cout << "Title     : " << title << "\n";
-        cout << "Author    : " << author << "\n";
-        cout << "Category  : " << category << "\n";
-        cout << "Price     : " << pricestr << "\n";
-        cout << "Quantity  : " << quantitystr << "\n";
-        char confirm;
-        cout << "\nDo you want to delete this book? (y/n): ";
-        cin >> confirm;
-        cin.ignore();
+    
+    if (isDeleted) {
+        ofstream outFile(filename);
+        if (!outFile.is_open()) {
+            cout << "Error writing to file!" << endl;
+            return;
+        }
 
-        if (tolower(confirm) == 'y') {
-            ofstream outFile(filename);
-            if (!outFile.is_open()) {
-                cout << "Error writing to file!" << endl;
-                return;
-            }
-            for (const string& l : lines) {
+        for (const string& l : lines) {
+            if (l != lineToDelete) {
                 outFile << l << endl;
             }
-            outFile.close();
-            cout << "Book deleted successfully!" << endl;
-        } else {
-            cout << "No changes made. Deletion canceled." << endl;
         }
+        outFile.close();
+        cout << "Book with ID " << deleteID << " deleted successfully!" << endl;
+    } else if (lineToDelete.empty()) {
+        cout << "No matching book was deleted. No changes made." << endl;
     } else {
         cout << "\nNo close match found for the title: \"" << Booktitleinput << "\"." << endl;
     }
 }
+
 
 void updatebook(const string& filename, const string& Booktitleinput) {
     ifstream file(filename);
@@ -417,7 +421,7 @@ void updatebook(const string& filename, const string& Booktitleinput) {
     }
     file.close();
 
-    if (bestsimilarity >= 0.5) { 
+    if (bestsimilarity >= 0.7) { 
         cout << "Closest match found: " << bestmatch << endl;
         cout << "Similarity score: " << bestsimilarity << endl;
 
@@ -494,6 +498,7 @@ void updatebook(const string& filename, const string& Booktitleinput) {
             default:
                 cout << "Invalid choice. No changes made." << endl;
                 return;
+                break;
         }
 
         for (string& l : lines) {
@@ -633,14 +638,14 @@ void purchasebyprice(const string& filename) {
         return;
     }
 
-    vector<string> bookdata; 
+    vector<string> bookdata;
     string line;
     while (getline(file, line)) {
         bookdata.push_back(line);
     }
     file.close();
 
-    vector<pair<string, pair<int, double>>> purchasebooks; 
+    vector<pair<string, pair<int, double>>> purchasebooks;
     bool continueshopping = true;
 
     while (continueshopping) {
@@ -670,7 +675,7 @@ void purchasebyprice(const string& filename) {
                 continue;
         }
 
-        vector<string> matchingbooks; 
+        vector<string> matchingbooks;
         cout << "\nSearching for books in the selected price range...\n";
 
         for (const auto& book : bookdata) {
@@ -684,124 +689,124 @@ void purchasebyprice(const string& filename) {
             getline(ss, quantity);
 
             try {
-                double bookprice = stod(price);
+                double bookprice = stod(price); // Convert price to a double
                 if ((bookprice >= minprice) && (maxprice == 0 || bookprice <= maxprice)) {
                     matchingbooks.push_back(book);
                 }
-            } catch (const invalid_argument& e) {
-                cout << "\nError: Invalid price format for book ID: " << id << ". Skipping this record.\n";
-            } catch (const out_of_range& e) {
-                cout << "\nError: Price out of range for book ID: " << id << ". Skipping this record.\n";
+            } catch (const invalid_argument&) {
+                cout << "Error: Invalid price format for book ID: " << id << ". Skipping this record.\n";
+                continue; // Skip invalid price records
+            } catch (const out_of_range&) {
+                cout << "Error: Price out of range for book ID: " << id << ". Skipping this record.\n";
+                continue; // Skip out-of-range price records
             }
         }
 
         if (matchingbooks.empty()) {
             cout << "\nNo books found in the selected price range." << endl;
-        } else {
-            cout << "\nBooks Found:\n";
-            cout << "===========================================================================================\n";
-            cout << left << setw(10) << "BookID"
-                 << setw(50) << "Title"
-                 << setw(20) << "Author"
-                 << setw(15) << "Category"
-                 << setw(10) << "Price"
-                 << setw(10) << "Quantity"
+            continue;
+        }
+
+        cout << "\nBooks Found:\n";
+        cout << "===========================================================================================\n";
+        cout << left << setw(10) << "BookID"
+             << setw(50) << "Title"
+             << setw(20) << "Author"
+             << setw(15) << "Category"
+             << setw(10) << "Price"
+             << setw(10) << "Quantity"
+             << "\n";
+        cout << "===========================================================================================\n";
+
+        for (const auto& book : matchingbooks) {
+            stringstream ss(book);
+            string id, title, author, category, price, quantity;
+            getline(ss, id, ',');
+            getline(ss, title, ',');
+            getline(ss, author, ',');
+            getline(ss, category, ',');
+            getline(ss, price, ',');
+            getline(ss, quantity);
+
+            cout << left << setw(10) << id
+                 << setw(50) << title
+                 << setw(20) << author
+                 << setw(15) << category
+                 << setw(10) << price
+                 << setw(10) << quantity
                  << "\n";
-            cout << "===========================================================================================\n";
+        }
 
-            for (const auto& book : matchingbooks) {
-                stringstream ss(book);
-                string id, title, author, category, price, quantity;
-                getline(ss, id, ',');
-                getline(ss, title, ',');
-                getline(ss, author, ',');
-                getline(ss, category, ',');
-                getline(ss, price, ',');
-                getline(ss, quantity);
+        cout << "\nEnter the Book ID to select the book, or type 'exit' to finish: ";
+        string selectedID;
+        cin >> selectedID;
 
-                cout << left << setw(10) << id
-                     << setw(50) << title
-                     << setw(20) << author
-                     << setw(15) << category
-                     << setw(10) << price
-                     << setw(10) << quantity
-                     << "\n";
-            }
+        if (selectedID == "exit") {
+            continueshopping = false;
+            break;
+        }
 
-            cout << "===========================================================================================\n";
+        bool bookfound = false;
+        for (auto& record : bookdata) {
+            stringstream ss(record);
+            string id, title, author, category, price, quantity;
+            getline(ss, id, ',');
+            getline(ss, title, ',');
+            getline(ss, author, ',');
+            getline(ss, category, ',');
+            getline(ss, price, ',');
+            getline(ss, quantity);
 
-            cout << "\nEnter the Book ID to select the book, or type 'exit' to finish: ";
-            string selectedID;
-            cin >> selectedID;
+            if (selectedID == id) {
+                bookfound = true;
+                int availablequantity = stoi(quantity);
+                int quantitypurchased;
 
-            if (selectedID == "exit") {
-                continueshopping = false;
+                cout << "\nEnter quantity you want to buy: ";
+                cin >> quantitypurchased;
+
+                if (quantitypurchased > availablequantity) {
+                    cout << "Sorry, only " << availablequantity << " copies are available." << endl;
+                } else {
+                    double bookprice = stod(price);
+                    purchasebooks.push_back({id, {quantitypurchased, bookprice}});
+
+                    // Update the quantity in bookData
+                    int remainingquantity = availablequantity - quantitypurchased;
+                    record = id + "," + title + "," + author + "," + category + "," + price + "," + to_string(remainingquantity);
+
+                    cout << "\nBook added to your cart." << endl;
+                }
                 break;
             }
+        }
 
-            bool bookfound = false;
-            for (auto& book : matchingbooks) {
-                stringstream ss(book);
-                string id, title, author, category, price, quantity;
-                getline(ss, id, ',');
-                getline(ss, title, ',');
-                getline(ss, author, ',');
-                getline(ss, category, ',');
-                getline(ss, price, ',');
-                getline(ss, quantity);
-
-                if (selectedID == id) {
-                    bookfound = true;
-                    int availablequantity = stoi(quantity);
-                    int quantitypurchased;
-
-                    cout << "\nEnter quantity you want to buy: ";
-                    cin >> quantitypurchased;
-
-                    if (quantitypurchased > availablequantity) {
-                        cout << "Sorry, only " << availablequantity << " copies are available." << endl;
-                    } else {
-                        double bookprice = stod(price);
-                        purchasebooks.push_back({id, {quantitypurchased, bookprice}});
-
-                        // Update the quantity in bookData
-                        int remainingquantity = availablequantity - quantitypurchased;
-                        string updatedrecord = id + "," + title + "," + author + "," + category + "," + price + "," + to_string(remainingquantity);
-                        for (auto& record : bookdata) {
-                            if (record.find(id) == 0) { // Update the matching book ID
-                                record = updatedrecord;
-                                break;
-                            }
-                        }
-
-                        cout << "\nBook added to your cart." << endl;
-                    }
-                    break;
-                }
-            }
-
-            if (!bookfound) {
-                cout << "\nInvalid Book ID. Please try again." << endl;
-            }
+        if (!bookfound) {
+            cout << "\nInvalid Book ID. Please try again." << endl;
         }
 
         cout << "\nDo you want to purchase another book? (Y/N): ";
         char cont;
         cin >> cont;
-        if (cont == 'N' || cont == 'n') {
+        if (tolower(cont) == 'n') {
             continueshopping = false;
         }
     }
 
-    
     printbill(purchasebooks);
 
+    // Write updated data back to the file
     ofstream outFile(filename, ios::trunc);
+    if (!outFile.is_open()) {
+        cout << "Error writing to file!" << endl;
+        return;
+    }
     for (const auto& record : bookdata) {
         outFile << record << "\n";
     }
     outFile.close();
 }
+
 
 
 

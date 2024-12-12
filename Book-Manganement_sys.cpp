@@ -217,9 +217,9 @@ void guestmenu() {
     int choice;
     do {
         system("cls");
-        cout << "\n\tWelcome to the Guest Menu" << endl;
+        cout << "\n\tWelcome to the Books Plaza Guest Menu" << endl;
         cout << "\n**********************************" << endl;
-        cout << "\n\t1. Search for a Book by Title" << endl;
+        cout << "\n\t1. Search for a Book by BookID" << endl;
         cout << "\n\t2. Search for a Book by Price" << endl;
         cout << "\n\t3. Exit to Main Menu" << endl;
         cout << "\nPlease enter your selection: ";
