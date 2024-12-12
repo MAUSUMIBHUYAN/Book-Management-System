@@ -689,16 +689,16 @@ void purchasebyprice(const string& filename) {
             getline(ss, quantity);
 
             try {
-                double bookprice = stod(price); // Convert price to a double
+                double bookprice = stod(price); 
                 if ((bookprice >= minprice) && (maxprice == 0 || bookprice <= maxprice)) {
                     matchingbooks.push_back(book);
                 }
             } catch (const invalid_argument&) {
                 cout << "Error: Invalid price format for book ID: " << id << ". Skipping this record.\n";
-                continue; // Skip invalid price records
+                continue; 
             } catch (const out_of_range&) {
                 cout << "Error: Price out of range for book ID: " << id << ". Skipping this record.\n";
-                continue; // Skip out-of-range price records
+                continue; 
             }
         }
 
@@ -770,8 +770,6 @@ void purchasebyprice(const string& filename) {
                 } else {
                     double bookprice = stod(price);
                     purchasebooks.push_back({id, {quantitypurchased, bookprice}});
-
-                    // Update the quantity in bookData
                     int remainingquantity = availablequantity - quantitypurchased;
                     record = id + "," + title + "," + author + "," + category + "," + price + "," + to_string(remainingquantity);
 
@@ -795,7 +793,6 @@ void purchasebyprice(const string& filename) {
 
     printbill(purchasebooks);
 
-    // Write updated data back to the file
     ofstream outFile(filename, ios::trunc);
     if (!outFile.is_open()) {
         cout << "Error writing to file!" << endl;
